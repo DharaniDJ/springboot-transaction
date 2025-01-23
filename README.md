@@ -104,3 +104,108 @@ Below is a high-level outline:
    5. Update the `stock` in `Inventory`.
 5. **Annotate** the service method with `@Transactional`.
 
+---
+
+## Configuration
+
+docker-compose.yml:
+
+```yml
+version: "3.8"
+
+services:
+  db:
+    image: mysql:latest
+    container_name: my-mysql
+    restart: always
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_DATABASE=springboot-transaction
+      # - MYSQL_USER=my_user
+      # - MYSQL_PASSWORD=my_user_password
+    volumes:
+      - ./mysql-data:/var/lib/mysql
+```
+
+Run:
+```
+docker compose up -d
+```
+
+connect using docker exec:
+```
+docker exec -it my-mysql mysql -u root -p
+```
+
+Create database:
+```
+CREATE DATABASE `springboot-transaction`;
+```
+
+And in `application.properties`, you have:
+
+```properties
+spring.application.name=springboot-transaction
+
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+spring.datasource.url = jdbc:mysql://localhost:3306/springboot-transaction
+spring.datasource.username = root
+spring.datasource.password = password
+spring.jpa.show-sql = true
+spring.jpa.hibernate.ddl-auto = update
+spring.jpa.properties.hibernate.dialect = org.hibernate.dialect.MySQLDialect
+server.port=9191
+spring.jpa.hibernate.naming.physical-strategy=org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+
+```
+
+---
+
+## Testing the Flow
+
+1. **Start the application** and ensure tables are created or updated.
+2. Insert a few `Product` records (e.g., via direct database insert or a POST endpoint).
+3. Use **Swagger** or **Postman** to send an **Order** request:
+   - If everything is correct, it should insert into the `Order` table and update the `Product` stock.
+   - If an error is intentionally triggered (e.g., throwing an exception in `InventoryHandler`), the entire transaction will roll back.
+
+### Happy Path
+
+- Place an order that is within the available stock.
+- Check both the `Order` and `Product` tables to confirm:
+  - `Order` is inserted with the correct `totalPrice`.
+  - `Product.stock` is decremented.
+
+### Failure Path
+
+- Force an exception in the inventory update step (simulate DB issue).
+- Observe that **no record** is added to the `Order` table (rollback).
+- Observe that `Product.stock` remains unchanged.
+
+---
+
+## **Swagger UI Screenshots**
+   ![Swagger UI Request body](https://github.com/user-attachments/assets/4a3d0f04-50e5-433b-bd75-2f7915d18ddc)
+   ![Swagger UI Response body](https://github.com/user-attachments/assets/a90a86f7-9f60-4209-b10f-1b5cdba4d5a6)
+
+---
+
+## Conclusion
+
+Spring Boot Transaction Management helps maintain **data consistency** and **integrity** across multiple database operations. By leveraging the `@Transactional` annotation, you ensure that:
+
+- **All** required changes either **commit** if successful.
+- **All** changes are **rolled back** if any step fails.
+
+This project covered:
+- A **real-time e-commerce use case**.
+- **Without transaction** vs. **with transaction** scenarios.
+- Basic code setup with Spring Data JPA.
+- How to test & validate the results in Swagger/Postman.
+
+In upcoming enhancements, you can explore:
+- **Propagation levels** (e.g., `REQUIRED`, `REQUIRES_NEW`, `NESTED`, etc.).
+- **Isolation levels** (`READ_COMMITTED`, `REPEATABLE_READ`, `SERIALIZABLE`, etc.).
+- Advanced scenarios like distributing transactions across microservices (which often involves tools like **Saga** or **Outbox pattern**).
