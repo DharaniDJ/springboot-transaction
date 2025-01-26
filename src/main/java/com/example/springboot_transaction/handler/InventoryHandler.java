@@ -3,10 +3,11 @@ package com.example.springboot_transaction.handler;
 import javax.management.RuntimeErrorException;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.springboot_transaction.entity.Product;
 import com.example.springboot_transaction.repository.InventoryRepository;
-
 @Service
 public class InventoryHandler {
     private final InventoryRepository inventoryRepository;
@@ -15,6 +16,7 @@ public class InventoryHandler {
         this.inventoryRepository = inventoryRepository;
     }
 
+    @Transactional(propagation = Propagation.REQUIRED)
     public Product updateProductDetails(Product product) {
         if(product.getPrice() > 5000){
             throw new RuntimeErrorException(null, "DB crashed.....");
